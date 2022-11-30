@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { shuffle } from './utils';
+import { GameState, Team, Turn } from './types';
 
 const subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => n.toString());
 const chosenSubjects = ref<string[]>([]);
@@ -12,11 +14,8 @@ const input1 = ref('Player 5');
 const input2 = ref('Player 6');
 
 const turn = ref<Turn>({ teamIndex: 0, playerIndex: 0 });
-
-interface Turn {
-  teamIndex: number;
-  playerIndex: 0 | 1;
-}
+const currentPlayer = computed(() => teams.value[turn.value.teamIndex][`player${turn.value.playerIndex}`])
+const guessedSubjects = ref([]);
 
 function getNewIndices({ teamIndex, playerIndex }: Turn, amountOfTeams: number): Turn {
   if (teamIndex === amountOfTeams && playerIndex === 1) {
@@ -28,22 +27,7 @@ function getNewIndices({ teamIndex, playerIndex }: Turn, amountOfTeams: number):
   return { teamIndex: teamIndex + 1, playerIndex }
 }
 
-enum GameState {
-  Setup,
-  PlayerReady,
-  TurnActive,
-  GameOver,
-  Victory,
-}
-
 const gameState = ref(GameState.Setup);
-
-interface Team {
-  name: string;
-  player0: string;
-  player1: string;
-  score: number;
-}
 
 // State
 const teams = ref<Team[]>([
@@ -51,24 +35,6 @@ const teams = ref<Team[]>([
   { name: 'Team 2', player0: 'Player 3', player1: 'Player 4', score: 0 }
 ]);
 const winningTeam = computed(() => teams.value.find(team => team.score >= maxScore.value));
-
-function shuffle<T>(array: T[]) {
-  let currentIndex = array.length, randomIndex;
-
-  // While there remain elements to shuffle.
-  while (currentIndex !== 0) {
-
-    // Pick a remaining element.
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-
-    // And swap it with the current element.
-    [array[currentIndex], array[randomIndex]] = [
-      array[randomIndex], array[currentIndex]];
-  }
-
-  return array;
-}
 
 function onSubmit() {
   teams.value = [...teams.value, { name: name.value, player0: input1.value, player1: input2.value, score: 0 }];
@@ -80,8 +46,6 @@ function onSubmit() {
 function onClickPlay() {
   gameState.value = GameState.PlayerReady;
 }
-
-const currentPlayer = computed(() => teams.value[turn.value.teamIndex][`player${turn.value.playerIndex}`])
 
 function onClickReady() {
   chosenSubjects.value = shuffle(subjects).slice(0, 5);
@@ -110,15 +74,12 @@ function onConfirmScore() {
   gameState.value = GameState.PlayerReady;
 }
 
-const guessedSubjects = ref([]);
-
 function onPlayAgain() {
   // Reset teams' scores
   teams.value = teams.value.map(team => ({ ...team, score: 0 }));
   turn.value = { teamIndex: 0, playerIndex: 0 };
   gameState.value = GameState.Setup;
 }
-
 </script>
 
 <template>
