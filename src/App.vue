@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { shuffle } from './utils';
 import { GameState, Team, Turn } from './types';
+import { useI18n } from 'vue-i18n';
+import { nl } from './subjects/nl';
+import { en } from './subjects/en';
 
-const subjects = [
-  'Twilight saga',
-  'Finding Nemo',
-  'Robert ten Brink',
-  'Marco van Basten',
-  'Radio 538',
-  'Venco',
-  'JK Rowling',
-  'Sloffen',
-  'Cameron Diaz',
-  'De Fabeltjeskrant',
-  'The Joker'];
+const { t, locale } = useI18n();
+
+watch(() => locale.value, (value) => {
+  localStorage.locale = value;
+})
+
+const SECONDS = 30;
+const subjects = computed(() => locale.value === 'nl' ? nl : en);
 const chosenSubjects = ref<string[]>([]);
 
 const maxScore = ref(15);
@@ -60,12 +59,11 @@ function onClickPlay() {
   gameState.value = GameState.PlayerReady;
 }
 
-const SECONDS = 30;
 
 function onClickReady() {
-  chosenSubjects.value = shuffle(subjects).slice(0, 5);
+  chosenSubjects.value = shuffle(subjects.value).slice(0, 5);
   gameState.value = GameState.TurnActive;
-  remainingSeconds.value = SECONDS;
+  remainingSeconds.value = SECONDS - 1;
   const interval = setInterval(() => {
     remainingSeconds.value--;
   }, 1000);
@@ -106,15 +104,22 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
 
 <template>
   <div class="text-white max-w-screen-sm mx-auto p-4 font-base text-2xl">
-    <h1 class="text-center mb-4 font-semibold text-2xl">30 Seconds</h1>
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-center font-semibold text-2xl">30 Seconds</h1>
+      <select v-model="locale" class="bg-yellow-600">
+        <option value="en">EN</option>
+        <option value="nl">NL</option>
+      </select>
+    </div>
 
     <template v-if="gameState === GameState.Setup">
-      <h2 class="font-semibold text-xl my-2">Create teams</h2>
-      <form @submit.prevent="onAddTeam" class="flex flex-col space-y-2 text-gray-900">
-        <input ref="teamInputRef" class="px-4 py-2 rounded" type="text" placeholder="Team name" v-model="name" required>
-        <input class="px-4 py-2 rounded" type="text" placeholder="Player 1" v-model="input1" required>
-        <input class="px-4 py-2 rounded" type="text" placeholder="Player 2" v-model="input2" required>
-        <button type="submit" class="bg-yellow-800 rounded p-2 my-2 text-white font-semibold">Add team</button>
+      <h2 class="font-semibold text-xl my-2">{{ t('create-teams') }}</h2>
+      <form @submit.prevent="onAddTeam" class="flex flex-col text-gray-900">
+        <input ref="teamInputRef" class="px-4 py-2 rounded mb-4" type="text" :placeholder="t('team-name')"
+          v-model="name" required>
+        <input class="px-4 py-2 rounded mb-2" type="text" :placeholder="`${t('player')} 1`" v-model="input1" required>
+        <input class="px-4 py-2 rounded mb-4" type="text" :placeholder="`${t('player')} 2`" v-model="input2" required>
+        <button type="submit" class="bg-yellow-800 rounded p-2 text-white font-semibold">{{ t('create') }}</button>
       </form>
       <h2 class="font-semibold text-xl my-2">Teams</h2>
       <div v-for="team of teams">
@@ -124,14 +129,16 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
       <h2 class="font-semibold text-xl my-2">Max. score</h2>
       <form @submit.prevent="onClickPlay" class="text-gray-900 flex flex-col">
         <input class="px-4 py-2 rounded mb-2" type="number" placeholder="Max. score" v-model="maxScore">
-        <button type="submit" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">Play game</button>
+        <button type="submit" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">
+          {{ t('play') }}
+        </button>
       </form>
 
     </template>
 
     <template v-if="gameState === GameState.PlayerReady">
       <div class="text-center flex flex-col">
-        <h2 class="font-semibold text-5xl my-8">{{ currentPlayer }} <br> are you ready?</h2>
+        <h2 class="font-semibold text-5xl my-8">{{ currentPlayer }} <br> {{ t('are-you-ready') }}</h2>
         <h2 class="font-semibold text-2xl my-2">Scores</h2>
         <div class="grid grid-cols-2 mb-6">
           <template v-for="team of teams">
@@ -139,8 +146,9 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
             <div>{{ team.score }}</div>
           </template>
         </div>
-        <button @click="onClickReady"
-          class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">Ready</button>
+        <button @click="onClickReady" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">
+          Start
+        </button>
       </div>
     </template>
 
@@ -169,20 +177,22 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
 
           </label>
         </div>
-        <button type="submit" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">Submit</button>
+        <button type="submit" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">{{ t('confirm')
+        }}</button>
       </form>
     </template>
     <template v-if="gameState === GameState.Victory">
       <div class="flex flex-col space-y-6 mt-12">
-        <h2 class="text-4xl text-center font-semibold">{{ winningTeam?.name }} won!</h2>
-        <h2 class="text-2xl text-center font-semibold">Final score</h2>
+        <h2 class="text-4xl text-center font-semibold">{{ winningTeam?.name }} {{ t('won') }}!</h2>
+        <h2 class="text-2xl text-center font-semibold">{{ t('result') }}</h2>
         <div class="grid grid-cols-2 text-center">
           <template v-for="team of sortedTeams">
             <div>{{ team.name }}</div>
             <div>{{ team.score }}</div>
           </template>
         </div>
-        <button @click="onPlayAgain" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white">Play again</button>
+        <button @click="onPlayAgain" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white">{{ t('play-again')
+        }}</button>
       </div>
     </template>
   </div>
