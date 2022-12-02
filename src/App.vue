@@ -19,9 +19,18 @@ const chosenSubjects = ref<string[]>([]);
 const maxScore = ref(15);
 
 // Single team data
-const name = ref('Team 3');
-const input1 = ref('Player 5');
-const input2 = ref('Player 6');
+const name = ref(
+// 'Team 3'
+''
+);
+const input1 = ref(
+// 'Player 5'
+''
+);
+const input2 = ref(
+// 'Player 6'
+'' 
+);
 
 const turn = ref<Turn>({ teamIndex: 0, playerIndex: 0 });
 const currentPlayer = computed(() => teams.value[turn.value.teamIndex][`player${turn.value.playerIndex}`])
@@ -40,10 +49,10 @@ function getNewIndices({ teamIndex, playerIndex }: Turn, amountOfTeams: number):
 const gameState = ref(GameState.Setup);
 
 // State
-const teams = ref<Team[]>([
+const teams = ref<Team[]>(/*[
   { name: 'Team 1', player0: 'Player 1', player1: 'Player 2', score: 0 },
   { name: 'Team 2', player0: 'Player 3', player1: 'Player 4', score: 0 }
-]);
+]*/ []);
 const winningTeam = computed(() => teams.value.find(team => team.score >= maxScore.value));
 const sortedTeams = computed(() => teams.value.sort((teamA, teamB) => teamB.score - teamA.score));
 const teamInputRef = ref<HTMLInputElement | null>(null);
