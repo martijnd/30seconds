@@ -8,12 +8,11 @@ export enum GameState {
 
 export interface Team {
   name: string;
-  player0: string;
-  player1: string;
+  players: string[];
   score: number;
 }
 
 export interface Turn {
   teamIndex: number;
-  playerIndex: 0 | 1;
+  playerIndex: number;
 }

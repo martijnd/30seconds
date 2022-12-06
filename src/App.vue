@@ -12,55 +12,58 @@ watch(() => locale.value, (value) => {
   localStorage.locale = value;
 })
 
-const SECONDS = 30;
+const SECONDS = 1;
 const subjects = computed(() => locale.value === 'nl' ? nl : en);
 const chosenSubjects = ref<string[]>([]);
+const teamSize = ref(2);
 
 const maxScore = ref(15);
 
 // Single team data
 const name = ref(
-// 'Team 3'
-''
+  // 'Team 3'
+  ''
 );
-const input1 = ref(
-// 'Player 5'
-''
-);
-const input2 = ref(
-// 'Player 6'
-'' 
-);
+const playerData = ref(Array.from({ length: teamSize.value }, () => ''));
 
-const turn = ref<Turn>({ teamIndex: 0, playerIndex: 0 });
-const currentPlayer = computed(() => teams.value[turn.value.teamIndex][`player${turn.value.playerIndex}`])
+watch(() => teamSize.value, (newVal, oldVal) => {
+  if (newVal > oldVal) {
+    playerData.value = [...playerData.value, ...Array.from({ length: newVal - oldVal }, () => '')];
+  } else {
+    playerData.value = playerData.value.slice(0, newVal);
+  }
+});
+
+
+const turn = ref<Turn>({ teamIndex: 2, playerIndex: 2 });
+const currentPlayer = computed(() => teams.value[turn.value.teamIndex].players[turn.value.playerIndex])
 const guessedSubjects = ref([]);
 
-function getNewIndices({ teamIndex, playerIndex }: Turn, amountOfTeams: number): Turn {
-  if (teamIndex === amountOfTeams && playerIndex === 1) {
-    return { teamIndex: 0, playerIndex: 0 }
+function nextPlayer({ teamIndex, playerIndex }: Turn, numTeams: number, numPlayers: number) {
+  // Increase the team index.
+  teamIndex = (teamIndex + 1) % numTeams;
+  // If the team index is 0, it means that every team has had its turn, so we need to increment the player index.
+  if (teamIndex === 0) {
+    playerIndex = (playerIndex + 1) % numPlayers;
   }
-  if (teamIndex === amountOfTeams - 1) {
-    return { teamIndex: 0, playerIndex: playerIndex === 1 ? 0 : 1 }
-  }
-  return { teamIndex: teamIndex + 1, playerIndex }
+
+  return { teamIndex, playerIndex };
 }
 
 const gameState = ref(GameState.Setup);
 
 // State
-const teams = ref<Team[]>(/*[
-  { name: 'Team 1', player0: 'Player 1', player1: 'Player 2', score: 0 },
-  { name: 'Team 2', player0: 'Player 3', player1: 'Player 4', score: 0 }
-]*/ []);
+const teams = ref<Team[]>([
+  // { name: 'Team 1', players: ['Player 1 team 1', 'Player 2 team 1', 'Player 3 team 1'], score: 0 },
+  // { name: 'Team 2', players: ['Player 1 team 2', 'Player 2 team 2', 'Player 3 team 2'], score: 0 },
+  // { name: 'Team 3', players: ['Player 1 team 3', 'Player 2 team 3', 'Player 3 team 3'], score: 0 }
+]);
 const winningTeam = computed(() => teams.value.find(team => team.score >= maxScore.value));
 const sortedTeams = computed(() => teams.value.sort((teamA, teamB) => teamB.score - teamA.score));
 const teamInputRef = ref<HTMLInputElement | null>(null);
 function onAddTeam() {
-  teams.value = [...teams.value, { name: name.value, player0: input1.value, player1: input2.value, score: 0 }];
+  teams.value = [...teams.value, { name: name.value, players: playerData.value, score: 0 }];
   name.value = '';
-  input1.value = '';
-  input2.value = '';
   teamInputRef.value?.focus();
 }
 
@@ -84,7 +87,7 @@ function onClickReady() {
 
 function onConfirmScore() {
   teams.value = teams.value.map(team => {
-    return team.player0 === currentPlayer.value || team.player1 === currentPlayer.value ? {
+    return team.players.includes(currentPlayer.value) ? {
       ...team,
       score: team.score + guessedSubjects.value.length
     } : team;
@@ -97,7 +100,7 @@ function onConfirmScore() {
     return;
   }
 
-  turn.value = getNewIndices(turn.value, teams.value.length);
+  turn.value = nextPlayer(turn.value, teams.value.length, teamSize.value);
   gameState.value = GameState.PlayerReady;
 }
 
@@ -122,12 +125,15 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
     </div>
 
     <template v-if="gameState === GameState.Setup">
-      <h2 class="font-semibold text-xl my-2">{{ t('create-teams') }}</h2>
-      <form @submit.prevent="onAddTeam" class="flex flex-col text-gray-900">
-        <input ref="teamInputRef" class="px-4 py-2 rounded mb-4" type="text" :placeholder="t('team-name')"
+      <form @submit.prevent="onAddTeam" class="flex flex-col">
+        <h2 class="font-semibold text-xl my-2">{{ t('team-size') }}</h2>
+        <input class="px-4 py-2 rounded text-black mb-2" type="number" min="2" max="6" step="1" v-model="teamSize"
+          required>
+        <h2 class="font-semibold text-xl my-2">{{ t('create-teams') }}</h2>
+        <input ref="teamInputRef" class="px-4 py-2 rounded text-black mb-4" type="text" :placeholder="t('team-name')"
           v-model="name" required>
-        <input class="px-4 py-2 rounded mb-2" type="text" :placeholder="`${t('player')} 1`" v-model="input1" required>
-        <input class="px-4 py-2 rounded mb-4" type="text" :placeholder="`${t('player')} 2`" v-model="input2" required>
+        <input v-for="(_, i) of playerData" class="px-4 py-2 rounded text-black mb-2" type="text"
+          :placeholder="`${t('player')} ${i + 1}`" v-model="playerData[i]" />
         <button type="submit" class="bg-yellow-800 rounded p-2 text-white font-semibold">{{ t('create') }}</button>
       </form>
       <h2 class="font-semibold text-xl my-2">Teams</h2>
@@ -137,7 +143,7 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
 
       <h2 class="font-semibold text-xl my-2">Max. score</h2>
       <form @submit.prevent="onClickPlay" class="text-gray-900 flex flex-col">
-        <input class="px-4 py-2 rounded mb-2" type="number" placeholder="Max. score" v-model="maxScore">
+        <input class="px-4 py-2 rounded text-black mb-2" type="number" placeholder="Max. score" v-model="maxScore">
         <button type="submit" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">
           {{ t('play') }}
         </button>

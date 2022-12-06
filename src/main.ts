@@ -6,6 +6,7 @@ import { createI18n } from "vue-i18n";
 const messages = {
   nl: {
     "create-teams": "Team aanmaken",
+    "team-size": "Spelers per team",
     "team-name": "Teamnaam",
     create: "Toevoegen",
     player: "Speler",
@@ -17,6 +18,7 @@ const messages = {
   },
   en: {
     "create-teams": "Create team",
+    "team-size": "Players per team",
     "team-name": "Team name",
     create: "Add team",
     player: "Player",
