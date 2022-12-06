@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { shuffle } from './utils';
 import { GameState, Team, Turn } from './types';
 import { useI18n } from 'vue-i18n';
@@ -12,7 +12,7 @@ watch(() => locale.value, (value) => {
   localStorage.locale = value;
 })
 
-const SECONDS = 1;
+const SECONDS = 30;
 const subjects = computed(() => locale.value === 'nl' ? nl : en);
 const chosenSubjects = ref<string[]>([]);
 const teamSize = ref(2);
@@ -34,8 +34,7 @@ watch(() => teamSize.value, (newVal, oldVal) => {
   }
 });
 
-
-const turn = ref<Turn>({ teamIndex: 2, playerIndex: 2 });
+const turn = ref<Turn>({ teamIndex: 0, playerIndex: 0 });
 const currentPlayer = computed(() => teams.value[turn.value.teamIndex].players[turn.value.playerIndex])
 const guessedSubjects = ref([]);
 
@@ -64,6 +63,7 @@ const teamInputRef = ref<HTMLInputElement | null>(null);
 function onAddTeam() {
   teams.value = [...teams.value, { name: name.value, players: playerData.value, score: 0 }];
   name.value = '';
+  playerData.value = Array.from({ length: teamSize.value }, () => '');
   teamInputRef.value?.focus();
 }
 
@@ -126,25 +126,31 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
 
     <template v-if="gameState === GameState.Setup">
       <form @submit.prevent="onAddTeam" class="flex flex-col">
-        <h2 class="font-semibold text-xl my-2">{{ t('team-size') }}</h2>
+        <h2 class="font-semibold text-2xl my-2">{{ t('team-size') }}</h2>
         <input class="px-4 py-2 rounded text-black mb-2" type="number" min="2" max="6" step="1" v-model="teamSize"
           required>
-        <h2 class="font-semibold text-xl my-2">{{ t('create-teams') }}</h2>
+        <h2 class="font-semibold text-2xl my-2">{{ t('create-teams') }}</h2>
         <input ref="teamInputRef" class="px-4 py-2 rounded text-black mb-4" type="text" :placeholder="t('team-name')"
           v-model="name" required>
         <input v-for="(_, i) of playerData" class="px-4 py-2 rounded text-black mb-2" type="text"
           :placeholder="`${t('player')} ${i + 1}`" v-model="playerData[i]" />
         <button type="submit" class="bg-yellow-800 rounded p-2 text-white font-semibold">{{ t('create') }}</button>
       </form>
-      <h2 class="font-semibold text-xl my-2">Teams</h2>
-      <div v-for="team of teams">
-        {{ team.name }}
+      <h2 class="font-semibold text-2xl mt-2">Teams</h2>
+      <div v-for="team of teams" class="ml-2">
+        <h3 class="italic">{{ team.name }}</h3>
+        <div class="text-sm ml-4">
+          <ul>
+            <li v-for="player of team.players">{{ player }}</li>
+          </ul>
+        </div>
       </div>
 
-      <h2 class="font-semibold text-xl my-2">Max. score</h2>
+      <h2 class="font-semibold text-2xl my-2">Max. score</h2>
       <form @submit.prevent="onClickPlay" class="text-gray-900 flex flex-col">
         <input class="px-4 py-2 rounded text-black mb-2" type="number" placeholder="Max. score" v-model="maxScore">
-        <button type="submit" class="bg-yellow-800 rounded py-2 px-4 my-2 text-white font-semibold">
+        <button :disabled="teams.length === 0" type="submit"
+          class="bg-yellow-800 disabled:bg-gray-700 rounded py-2 px-4 my-2 text-white font-semibold">
           {{ t('play') }}
         </button>
       </form>
@@ -168,6 +174,7 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
     </template>
 
     <template v-if="(gameState === GameState.TurnActive)">
+      <h2 class="font-semibold text-5xl mt-12 mb-4 text-center">{{ currentPlayer }}</h2>
       <div class="mt-10 flex flex-col bg-white px-6 py-8 rounded-lg shadow-lg text-black">
         <ul class="space-y-8">
           <li v-for="chosenSubject of chosenSubjects">{{ chosenSubject }}</li>
