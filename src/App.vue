@@ -13,8 +13,9 @@ watch(() => locale.value, (value) => {
 })
 
 const SECONDS = 30;
-const subjects = computed(() => locale.value === 'nl' ? nl : en);
+const subjects = computed(() => new Set(locale.value === 'nl' ? nl : en));
 const chosenSubjects = ref<string[]>([]);
+const alreadyPickedSubjects = ref<string[]>([]);
 const teamSize = ref(2);
 
 const maxScore = ref(15);
@@ -71,9 +72,12 @@ function onClickPlay() {
   gameState.value = GameState.PlayerReady;
 }
 
-
 function onClickReady() {
-  chosenSubjects.value = shuffle(subjects.value).slice(0, 5);
+  chosenSubjects.value = shuffle([...subjects.value.values()]
+    .filter(
+      word => !alreadyPickedSubjects.value.includes(word)
+    )).slice(0, 5);
+  alreadyPickedSubjects.value = [...alreadyPickedSubjects.value, ...chosenSubjects.value];
   gameState.value = GameState.TurnActive;
   remainingSeconds.value = SECONDS - 1;
   const interval = setInterval(() => {
@@ -181,7 +185,7 @@ const countDownWidth = computed(() => `${(remainingSeconds.value / SECONDS) * 10
         </ul>
       </div>
       <!-- countdown -->
-      <div class="relative mt-8">
+      <div class="relative py-8">
         <div class="absolute w-full h-4 bg-yellow-500 rounded-lg"></div>
         <div class="absolute h-4 bg-yellow-700 transition-all duration-1000 ease-linear rounded-lg"
           :style="{ width: countDownWidth }"></div>
